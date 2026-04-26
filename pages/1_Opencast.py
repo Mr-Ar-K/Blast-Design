@@ -9,6 +9,7 @@ from modules.rock_mass import auto_adjustment_factors, calculate_rmr, estimate_g
 from modules.simulation import simulate_burden_distribution
 from modules.visuals import plot_blast_layout, plot_delay_layout, plot_fragmentation_curve
 from modules.cost_optimization import recommend_opencast_layout, total_drilling_blasting_cost, cost_per_tonne
+from modules.reporting import generate_pdf_report
 
 
 st.set_page_config(page_title="Opencast Blast Design", layout="wide")
@@ -197,3 +198,30 @@ with tab3:
 
         st.markdown("#### Bench Pattern Alternatives")
         st.dataframe(options_df, use_container_width=True)
+
+        st.markdown("#### Field Operations")
+        kpi_dict = {
+            "Target Tonnage (t)": tonnage,
+            "Cost per Tonne (INR)": f"{cpt:.2f}",
+            "Mean Fragment X50 (cm)": f"{summary['X50 / Xm (cm)']:.1f}",
+            "Powder Factor (kg/m3)": f"{summary['Powder factor (kg/m3)']:.2f}",
+        }
+        geo_dict = {
+            "Hole Diameter (mm)": bench["hole_diameter"],
+            "Burden (m)": f"{summary['Burden (m)']:.2f}",
+            "Spacing (m)": f"{summary['Spacing (m)']:.2f}",
+            "Stemming (m)": f"{summary['Stemming (m)']:.2f}",
+            "Subdrilling (m)": f"{summary['Subdrilling (m)']:.2f}",
+            "Charge per Hole (kg)": f"{charge_mass:.1f}",
+        }
+
+        pdf_path = generate_pdf_report("Opencast Bench Layout", kpi_dict, geo_dict)
+        with open(pdf_path, "rb") as pdf_file:
+            st.download_button(
+                label="Download Blast Plan (PDF)",
+                data=pdf_file,
+                file_name="Blast_Plan_Report.pdf",
+                mime="application/pdf",
+                type="primary",
+            )
+

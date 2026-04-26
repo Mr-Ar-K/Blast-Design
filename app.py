@@ -11,6 +11,7 @@ from modules.simulation import simulate_burden_distribution
 from modules.underground import UndergroundDesign, delay_timing_simulation, drill_deviation_model, flyrock_safety_margin, ppv_usbm
 from modules.visuals import plot_3d_layout, plot_blast_layout, plot_delay_layout, plot_fragmentation_curve
 from modules.cost_optimization import recommend_opencast_layout
+from modules.reporting import generate_pdf_report
 
 
 st.set_page_config(page_title="Blast Design Optimizer", layout="wide")
@@ -258,6 +259,31 @@ elif method == "Underground (Tunneling)":
         st.plotly_chart(plot_3d_layout(adjusted_points, title=f"{cut_type} 3D Layout"), use_container_width=True)
 
         st.write(delay_timing_simulation(rows=hole_counts["N_cut"], cols=1))
+
+        st.subheader("Field Operations")
+        kpi_dict = {
+            "Specific Charge (kg/m3)": f"{q:.2f}",
+            "Estimated Charge/Delay (kg)": f"{estimated_charge_delay:.2f}",
+            "PPV (mm/s)": f"{ppv:.2f}",
+            "Airblast (dB)": f"{airblast_db:.2f}",
+        }
+        geo_dict = {
+            "Tunnel Width (m)": tunnel_width,
+            "Tunnel Height (m)": tunnel_height,
+            "Advance (m)": advance,
+            "Cut Pattern": cut_type,
+            "Total Holes": int(hole_counts["N_total"]),
+            "Visualized Holes": len(points),
+        }
+        pdf_path = generate_pdf_report("Underground Blast Layout", kpi_dict, geo_dict)
+        with open(pdf_path, "rb") as pdf_file:
+            st.download_button(
+                label="Download Underground Plan (PDF)",
+                data=pdf_file,
+                file_name="Underground_Blast_Plan.pdf",
+                mime="application/pdf",
+                type="primary",
+            )
 
         st.write(optimize_underground(tunnel, explosive))
 
