@@ -82,3 +82,31 @@ class UndergroundDesign:
             (cx, cy + spacing),
             (cx, cy - spacing),
         ])
+
+    def contour_hole_points(self, spacing=0.6):
+        """Generates contour holes along tunnel perimeter (arch roof + straight walls)."""
+        if spacing <= 0:
+            raise ValueError("spacing must be positive")
+
+        w = self.tunnel["width"]
+        h = self.tunnel["height"]
+        radius = w / 2.0
+        arch_center_y = h - radius
+        arch_length = math.pi * radius
+        num_arch_holes = max(1, int(arch_length / spacing))
+        points = []
+
+        for i in range(num_arch_holes + 1):
+            angle = math.pi * (i / num_arch_holes)
+            x = radius * math.cos(angle)
+            y = arch_center_y + radius * math.sin(angle)
+            points.append((x, y))
+
+        wall_height = max(arch_center_y, 0.0)
+        num_wall_holes = int(wall_height / spacing)
+        for i in range(1, num_wall_holes + 1):
+            y = arch_center_y - (i * spacing)
+            points.append((-radius, y))
+            points.append((radius, y))
+
+        return np.array(points)

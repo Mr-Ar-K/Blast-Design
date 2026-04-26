@@ -1,11 +1,46 @@
 import math
 
 
+def scaled_distance(distance_m, charge_weight_kg):
+    if distance_m <= 0 or charge_weight_kg <= 0:
+        raise ValueError("distance_m and charge_weight_kg must be positive")
+    return distance_m / (charge_weight_kg ** 0.5)
+
+
+def airblast_overpressure(distance_m, charge_weight_kg, k_air=164.4, alpha_air=-24.0):
+    sd = scaled_distance(distance_m, charge_weight_kg)
+    return k_air + (alpha_air * math.log10(sd))
+
+
+def max_instantaneous_charge(distance_m, target_scaled_distance=22.0):
+    if distance_m <= 0 or target_scaled_distance <= 0:
+        raise ValueError("distance_m and target_scaled_distance must be positive")
+    return (distance_m / target_scaled_distance) ** 2
+
+
 class OpencastDesign:
     def __init__(self, rock, explosive, bench):
         self.rock = rock
         self.explosive = explosive
         self.bench = bench
+
+    def calculate_hardness_factor(self, ucs_mpa, youngs_modulus_gpa):
+        # Lightweight proxy where higher UCS and stiffness increase hardness contribution.
+        return 0.5 * ((ucs_mpa / 5.0) + youngs_modulus_gpa)
+
+    def calculate_rock_factor(self, rmd, jps, jpo, rdi, hardness):
+        """
+        Calculates Cunningham's Rock Factor (A) for the Kuz-Ram model.
+        rmd: Rock Mass Description (10=powdery, 50=massive)
+        jps: Joint Plane Spacing
+        jpo: Joint Plane Orientation
+        rdi: Rock Density Influence (25 * density_t_m3 - 50)
+        hardness: Hardness factor (based on UCS and Young's Modulus)
+        """
+        joint_factor = jps + jpo
+        rock_factor = 0.06 * (rmd + joint_factor + rdi + hardness)
+        self.rock["rock_factor"] = rock_factor
+        return rock_factor
 
     def burden_konya_walter(self):
         d = self.bench["hole_diameter"]
@@ -44,7 +79,7 @@ class OpencastDesign:
         return self.charge_per_hole() / max(volume, 1e-6)
 
     def kuz_ram_xm(self):
-        factor_a = self.rock["rock_factor"]
+        factor_a = self.rock.get("rock_factor", 7.0)
         powder_factor = self.powder_factor()
         charge = self.charge_per_hole()
         anfo_strength = self.explosive["rws"]
@@ -75,6 +110,7 @@ class OpencastDesign:
 
     def fragmentation_summary(self):
         return {
+            "Rock factor A": self.rock.get("rock_factor", 7.0),
             "Burden (m)": self.burden(),
             "Spacing (m)": self.spacing(),
             "Stemming (m)": self.stemming(),

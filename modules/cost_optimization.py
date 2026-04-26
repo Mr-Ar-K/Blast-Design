@@ -1,3 +1,4 @@
+import pandas as pd
 from scipy.optimize import minimize
 
 from modules.opencast import OpencastDesign
@@ -50,3 +51,61 @@ def optimize_underground(tunnel, explosive):
         "cost_per_tonne": cost_per_tonne(total_cost, tunnel.get("tonnage", 1.0)),
         "cost_per_cubic_meter": cost_per_cubic_meter(total_cost, design.face_area() * tunnel.get("advance", 1.0)),
     }
+
+
+def generate_opencast_scenarios(rock, explosive, base_bench, target_x50=15.0):
+    """
+    Generates multiple blast design cases based on standard hole diameters.
+    Returns a DataFrame of results and identifies the best case.
+    """
+    standard_diameters = [89.0, 102.0, 115.0, 150.0, 165.0, 200.0]
+    results = []
+
+    for diameter in standard_diameters:
+        trial_bench = dict(base_bench)
+        trial_bench["hole_diameter"] = diameter
+        design = OpencastDesign(rock, explosive, trial_bench)
+
+        burden = design.burden()
+        spacing = design.spacing()
+        charge = design.charge_per_hole()
+        pf = design.powder_factor()
+        x50 = design.kuz_ram_xm()
+        n_index = design.uniformity_index()
+
+        tonnage_per_hole = burden * spacing * trial_bench["bench_height"] * rock["density"] / 1000
+        cost_explosive = charge * explosive.get("cost_per_kg", 0.0)
+        cost_drilling = trial_bench.get("drilling_cost_per_m", 0.0) * (trial_bench["bench_height"] + design.subdrilling())
+        total_hole_cost = cost_explosive + cost_drilling + trial_bench.get("accessories_cost", 0.0)
+
+        cost_per_tonne_value = total_hole_cost / max(tonnage_per_hole, 1e-6)
+
+        results.append(
+            {
+                "Hole Dia (mm)": diameter,
+                "Burden x Spacing (m)": f"{burden:.1f} x {spacing:.1f}",
+                "Powder Factor (kg/m3)": round(pf, 2),
+                "Mean Fragment X50 (cm)": round(x50, 2),
+                "Uniformity (n)": round(n_index, 2),
+                "Cost per Tonne (₹)": round(cost_per_tonne_value, 2),
+                "Total Hole Cost (₹)": round(total_hole_cost, 2),
+                "_x50_raw": x50,
+                "_cost_raw": cost_per_tonne_value,
+            }
+        )
+
+    df = pd.DataFrame(results)
+
+    valid_cases = df[df["_x50_raw"] <= target_x50]
+
+    if not valid_cases.empty:
+        best_idx = valid_cases["_cost_raw"].idxmin()
+        best_case = df.loc[best_idx].copy()
+    else:
+        best_idx = df["_x50_raw"].idxmin()
+        best_case = df.loc[best_idx].copy()
+        best_case["Note"] = "Target X50 not met, showing finest fragmentation."
+
+    df_clean = df.drop(columns=["_x50_raw", "_cost_raw"])
+
+    return df_clean, best_case
