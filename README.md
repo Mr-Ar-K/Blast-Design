@@ -1,19 +1,21 @@
 # Blast Design Optimization for Hard Rock Critical Mineral Mining
 
-This repository provides a Streamlit-based engineering application for blast design, pattern generation, and cost optimization across opencast and underground mining scenarios.
+This repository contains a Streamlit-based engineering decision-support application for blasting in opencast and underground operations.
 
-## Scope
+The app combines blast geometry, rock-mass intelligence, environmental compliance checks, cost optimization, and scenario analysis.
 
-- Opencast bench blast design calculations
-- Underground tunnel blast planning (V-cut and burn-cut)
-- Cost analysis and constrained optimization
-- 2D and 3D blast hole visualization with Plotly
-- Practical engineering checks:
-	- Delay timing simulation
-	- USBM-based PPV estimate
-	- Flyrock stemming margin check
-	- Drill deviation perturbation model
-	- Kuz-Ram calibration against observed fragmentation
+## Key Capabilities
+
+- Opencast blast design with dynamic Cunningham rock factor.
+- Rock mass context integration using RMR, GSI, and adjustment factors.
+- Bench pattern optimization across multiple layouts and hole diameters.
+- Fragmentation modeling with Kuz-Ram plus Rosin-Rammler distribution.
+- P20, P50, and P80 fragmentation outputs for crusher/plant alignment.
+- Vibration, airblast, MIC, and allowable charge-per-delay estimates.
+- Flyrock risk prediction and risk-zone radius reporting.
+- Delay timing sequence generation and delay heat-map visualization.
+- Monte Carlo simulation for burden uncertainty and confidence bands.
+- Underground cut/contour pattern support and specific-charge estimation.
 
 ## Project Structure
 
@@ -23,7 +25,12 @@ This repository provides a Streamlit-based engineering application for blast des
 ├── modules
 │   ├── __init__.py
 │   ├── cost_optimization.py
+│   ├── delay.py
+│   ├── flyrock.py
+│   ├── fragmentation.py
 │   ├── opencast.py
+│   ├── rock_mass.py
+│   ├── simulation.py
 │   ├── underground.py
 │   └── visuals.py
 ├── pages
@@ -33,36 +40,77 @@ This repository provides a Streamlit-based engineering application for blast des
 └── requirements.txt
 ```
 
-## Engineering Models Included
+## Engineering Modules
 
-### Opencast
+### modules/opencast.py
 
-- Burden (Konya and Walter style metric form)
-- Spacing, stemming, and subdrilling
-- Charge per hole and powder factor
-- Kuz-Ram fragmentation mean size $X_m$/$X_{50}$
-- Uniformity index $n$ (Rosin-Rammler related)
+- Burden and spacing calculation with rock-mass adjustment.
+- Stemming, subdrilling, charge-per-hole, and powder factor.
+- Kuz-Ram mean fragment size (X50/Xm) and uniformity index.
+- Cunningham rock factor from geology descriptors.
+- Environmental helpers:
+	- Scaled distance and airblast overpressure.
+	- Peak particle velocity (PPV).
+	- Maximum instantaneous charge (MIC).
+	- Maximum allowable charge per delay.
 
-### Underground
+### modules/rock_mass.py
 
-- Tunnel face area
-- Rock constraining factor $k_{cons} = \frac{6.5}{\sqrt{S_{dr}}}$
-- Specific charge estimation (Pokrovsky-style structure)
-- Hole distribution accounting:
-	- $N = N_{cut} + N_{out} + N_o$
-- Geometric V-cut and burn-cut generation
+- RMR calculation from rating components.
+- GSI estimation from RMR and disturbance.
+- Auto-adjustment factors for geometry and charging.
 
-### Cost and Optimization
+### modules/fragmentation.py
 
-- Total cost model:
-	- $C_T = C_A + C_B + C_D + C_{DR}$
-- Objective minimization with penalty constraints for:
-	- Fragment size target
-	- Uniformity index target
+- Rosin-Rammler passing function.
+- Full size-distribution curve generation.
+- Fragment size percentiles (P20, P50, P80).
+
+### modules/cost_optimization.py
+
+- Cost functions (`cost_per_tonne`, `cost_per_cubic_meter`).
+- Opencast and underground optimization routines.
+- Scenario generation across standard hole diameters.
+- Bench layout recommendation across patterns:
+	- Square
+	- Staggered
+	- Triangular
+	- Echelon
+
+### modules/delay.py
+
+- Row-wise delay schedule generation.
+- V-cut sequence timing.
+- Delay scatter data assembly.
+
+### modules/flyrock.py
+
+- Flyrock distance estimate.
+- Risk-zone classification (LOW, MEDIUM, HIGH).
+
+### modules/simulation.py
+
+- Monte Carlo burden simulation.
+- Confidence interval calculation.
+- Distribution summary (mean, std, CI).
+
+### modules/visuals.py
+
+- Blast layout plot (2D).
+- Underground layout plot (3D).
+- Fragmentation curve plot.
+- Delay timing map (color coded).
+
+## Streamlit Pages
+
+- `app.py`: main entry with opencast and underground workflows.
+- `pages/1_Opencast.py`: advanced opencast report workflow.
+- `pages/2_Underground.py`: underground geometry and pattern tools.
+- `pages/3_Cost_Optimization.py`: scenario and trade-off analysis.
 
 ## Setup
 
-1. Create and activate a virtual environment (recommended).
+1. Create and activate a virtual environment.
 2. Install dependencies:
 
 ```bash
@@ -75,9 +123,17 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Then open the local Streamlit URL shown in the terminal.
+If port 8501 is already in use, run:
 
-## Notes
+```bash
+streamlit run app.py --server.port 8502
+```
 
-- The formulas in this app are structured for engineering decision support and rapid scenario analysis.
-- Field calibration (fragmentation sieving, vibration logs, geology class updates) should be performed before production deployment.
+## Practical Notes
+
+- Model outputs are intended for engineering screening and optimization support.
+- Always calibrate with site field data before production use:
+	- Fragmentation measurements (sieving/image analysis)
+	- Vibration monitoring logs
+	- Geology/rock-mass mapping updates
+	- Cost and productivity reconciliation
