@@ -1,5 +1,7 @@
 import math
 
+from modules.rock_mass import rock_mass_factor
+
 
 def scaled_distance(distance_m, charge_weight_kg):
     if distance_m <= 0 or charge_weight_kg <= 0:
@@ -16,6 +18,19 @@ def max_instantaneous_charge(distance_m, target_scaled_distance=22.0):
     if distance_m <= 0 or target_scaled_distance <= 0:
         raise ValueError("distance_m and target_scaled_distance must be positive")
     return (distance_m / target_scaled_distance) ** 2
+
+
+def ppv(distance, charge, k=1140.0, n=1.6):
+    if distance <= 0 or charge <= 0:
+        raise ValueError("distance and charge must be positive")
+    return k * (distance / math.sqrt(charge)) ** (-n)
+
+
+def max_allowable_charge_per_delay(ppv_limit, distance, k=1140.0, n=1.6):
+    if ppv_limit <= 0 or distance <= 0:
+        raise ValueError("ppv_limit and distance must be positive")
+    scaled_distance_target = (k / ppv_limit) ** (1.0 / n)
+    return (distance / scaled_distance_target) ** 2
 
 
 class OpencastDesign:
@@ -56,10 +71,15 @@ class OpencastDesign:
         return 0.958 * d * math.sqrt(rho_e / (c0 * factor_of_structure)) * (rho_c / max(self.rock["density"], 1e-6)) ** (1 / 3)
 
     def burden(self):
-        return self.burden_konya_walter()
+        burden = self.burden_konya_walter()
+        adjustment = rock_mass_factor(self.rock.get("rmr", 55.0))
+        return burden * adjustment
 
     def spacing(self):
-        return 1.25 * self.burden()
+        base_burden = self.burden_konya_walter()
+        spacing = 1.25 * base_burden
+        adjustment = rock_mass_factor(self.rock.get("rmr", 55.0))
+        return spacing * adjustment
 
     def stemming(self):
         return self.burden()
