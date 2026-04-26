@@ -16,6 +16,8 @@ The app combines blast geometry, rock-mass intelligence, environmental complianc
 - Delay timing sequence generation and delay heat-map visualization.
 - Monte Carlo simulation for burden uncertainty and confidence bands.
 - Underground cut/contour pattern support and specific-charge estimation.
+- Underground tabbed dashboard for tunnel drivage planning.
+- One-click PDF blast report export for opencast and underground plans.
 
 ## Project Structure
 
@@ -32,6 +34,7 @@ The app combines blast geometry, rock-mass intelligence, environmental complianc
 │   ├── rock_mass.py
 │   ├── simulation.py
 │   ├── underground.py
+│   ├── reporting.py
 │   └── visuals.py
 ├── pages
 │   ├── 1_Opencast.py
@@ -94,6 +97,12 @@ The app combines blast geometry, rock-mass intelligence, environmental complianc
 - Confidence interval calculation.
 - Distribution summary (mean, std, CI).
 
+### modules/reporting.py
+
+- PDF report generator for field-ready blast plans.
+- Executive KPI and geometry section export.
+- Used by opencast and underground Streamlit pages.
+
 ### modules/visuals.py
 
 - Blast layout plot (2D).
@@ -105,8 +114,14 @@ The app combines blast geometry, rock-mass intelligence, environmental complianc
 
 - `app.py`: main entry with opencast and underground workflows.
 - `pages/1_Opencast.py`: advanced opencast report workflow.
-- `pages/2_Underground.py`: underground geometry and pattern tools.
+- `pages/2_Underground.py`: tabbed underground dashboard with delay map and compliance checks.
 - `pages/3_Cost_Optimization.py`: scenario and trade-off analysis.
+
+## Reporting
+
+- Opencast page supports PDF download for bench blast plan.
+- Underground page supports PDF download for tunnel blast plan.
+- Main `app.py` route also includes underground PDF export.
 
 ## Setup
 
